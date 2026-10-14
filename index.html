@@ -163,12 +163,16 @@ btn.addEventListener("click",generate);inp.addEventListener("keydown",e=>{if(e.k
   const btn=document.getElementById("make");
   const good=Number.isFinite(open)&&Number.isFinite(close)&&open<close;
   const fmt=t=>new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(t));
-  window.meritIsOpen=()=>good && Date.now()>=open && Date.now()<close;
+  // 仅供上线前功能测试：公开测试参数，不是密码或访问控制。
+  const preview=new URLSearchParams(location.search).get("preview")==="1";
+  window.meritIsOpen=()=>preview || (good && Date.now()>=open && Date.now()<close);
   function render(){
     const now=Date.now(),active=window.meritIsOpen();
-    document.body.classList.toggle("activity-closed",good && now>=close);
-    document.body.classList.toggle("activity-before",good && now<open);
-    if(!good){
+    document.body.classList.toggle("activity-closed",!preview && good && now>=close);
+    document.body.classList.toggle("activity-before",!preview && good && now<open);
+    if(preview){
+      notice.innerHTML="<strong>管理员测试模式</strong><div>仅用于检查生成和保存功能，请勿向学习群分享此测试链接。</div>";
+    }else if(!good){
       notice.innerHTML="<strong>活动时间尚未正确设置</strong>请管理员先配置开放和结束日期。";
     }else if(now<open){
       notice.textContent="";
@@ -183,7 +187,7 @@ btn.addEventListener("click",generate);inp.addEventListener("keydown",e=>{if(e.k
   }
   // 只发送匿名事件、供养类别及项目，不发送姓名/法名、金额、Cookie 或设备标识。
   window.meritTrack=function(type,category="",project=""){
-    if(!["view","generate"].includes(type))return;
+    if(preview || !["view","generate"].includes(type))return;
     try{
       fetch("/api/track",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({type,category,project}),keepalive:true,credentials:"omit"})
